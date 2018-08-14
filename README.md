@@ -15,7 +15,7 @@ import (
 )
 
 func main()  {
-	messages, _ := udp_server.ListenUdp("0.0.0.0", 8881, 1024)
+	messages, _ := udp_server.ListenUdp("0.0.0.0", 8881, 1024, 100)
 	for m := range messages {
 		fmt.Println(string(m.Message))
 	}

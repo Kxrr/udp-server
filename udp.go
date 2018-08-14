@@ -1,13 +1,20 @@
 package udp_server
 
-import "net"
+import (
+	"net"
+	"errors"
+)
 
 type IncomingMessage struct {
-	Message []byte
+	Data []byte
 	Remote  *net.UDPAddr
+	Error error
 }
 
-func ListenUdp(host string, port int, bufsize int) (chan IncomingMessage, error) {
+
+var ErrorOverFlow = errors.New("data overflowed, maybe you can increase the dataBuf")
+
+func ListenUdp(host string, port int, dataBuf int, incomingChBuf int) (chan IncomingMessage, error) {
 	addr := net.UDPAddr{
 		Port: port,
 		IP:   net.ParseIP(host),
@@ -16,17 +23,36 @@ func ListenUdp(host string, port int, bufsize int) (chan IncomingMessage, error)
 	if err != nil {
 		return nil, err
 	}
-	incoming := make(chan IncomingMessage)
-	buf := make([]byte, bufsize)
+	// use a buffered channel here
+	// data from connection will queued if no one read from the channel
+	incoming := make(chan IncomingMessage, incomingChBuf)
+	buf := make([]byte, dataBuf)
 	go func() {
 		for {
-			rlen, remote, err := conn.ReadFromUDP(buf[:])
+			rlen, remote, err := conn.ReadFromUDP(buf)
 			if err != nil {
-				panic(err)
+				incoming <- IncomingMessage{
+					nil,
+					remote,
+					err,
+				}
+				continue
 			}
+
+			if rlen > dataBuf {
+				incoming <- IncomingMessage{
+					nil,
+					remote,
+					ErrorOverFlow,
+				}
+				continue
+			}
+			data := make([]byte, rlen)
+			copy(data, buf[0:rlen])
 			incoming <- IncomingMessage{
-				buf[0:rlen],
+				data,
 				remote,
+				nil,
 			}
 		}
 	}()
