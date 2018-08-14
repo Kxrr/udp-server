@@ -14,7 +14,7 @@ type IncomingMessage struct {
 
 var ErrorOverFlow = errors.New("data overflowed, maybe you can increase the dataBuf")
 
-func ListenUdp(host string, port int, dataBuf int, incomingChBuf int) (chan IncomingMessage, error) {
+func ListenUdp(host string, port int, dataBuf int, incomingBuf int) (chan IncomingMessage, error) {
 	addr := net.UDPAddr{
 		Port: port,
 		IP:   net.ParseIP(host),
@@ -25,7 +25,7 @@ func ListenUdp(host string, port int, dataBuf int, incomingChBuf int) (chan Inco
 	}
 	// use a buffered channel here
 	// data from connection will queued if no one read from the channel
-	incoming := make(chan IncomingMessage, incomingChBuf)
+	incoming := make(chan IncomingMessage, incomingBuf)
 	buf := make([]byte, dataBuf)
 	go func() {
 		for {
@@ -38,17 +38,16 @@ func ListenUdp(host string, port int, dataBuf int, incomingChBuf int) (chan Inco
 				}
 				continue
 			}
-
+			data := make([]byte, rlen)
+			copy(data, buf[0:rlen])
 			if rlen > dataBuf {
 				incoming <- IncomingMessage{
-					nil,
+					data,
 					remote,
 					ErrorOverFlow,
 				}
 				continue
 			}
-			data := make([]byte, rlen)
-			copy(data, buf[0:rlen])
 			incoming <- IncomingMessage{
 				data,
 				remote,

@@ -11,7 +11,10 @@ import (
 	"math/rand"
 )
 
-var port = 12345 + int(rand.Float32() * 100)
+func getRandomPort() int {
+	rand.Seed(time.Now().UTC().UnixNano())
+	return 20000 + int(rand.Float32() * 100)
+}
 
 type stringData struct {
 	data []string
@@ -38,6 +41,7 @@ func (r *stringData) ContainsSameStrings(other stringData) bool {
 
 
 func TestUDPServer(t *testing.T) {
+	port := getRandomPort()
 	messages, err := ListenUdp("127.0.0.1", port, 1024, 100)
 	if err != nil {
 		t.Fatal(err)
